@@ -1,6 +1,6 @@
 /* INDI Driver for Milkyway Microstepper
  *
- * written 2019 by Juergen Ehnes (juergen@ehnes.eu)
+ * written 2019 by Juergen Ehnes (juergen at ehnes dot eu)
  *
  *  This library is free software; you can redistribute it and/or
   modify it under the terms of the GNU Lesser General Public
@@ -35,6 +35,13 @@ public:
     bool saveConfigItems(FILE *fp) override;
     IPState MoveAbsFocuser(uint32_t targetTicks) override;
     IPState MoveRelFocuser(FocusDirection dir, uint32_t ticks);
+    bool ReverseFocuser(bool enabled);
+
+    enum FocusDirectionState {
+        NORMAL,
+        REVERSE
+    } ;
+
 protected:
 
     bool readPosition();
@@ -43,6 +50,7 @@ protected:
     bool isMoving;
     unsigned char isParked;
     bool isVcc12V;
+    bool reverseFocus = false;
 
     ///////////////////////////////////////////////////////////////////////////////
     /// Utility Functions
@@ -83,7 +91,11 @@ protected:
     // Maximum buffer for sending/receving.
     static constexpr const uint8_t DRIVER_LEN {64};
 
+    static constexpr const int32_t MAXIMUM_STEPS_PER_SEND { 1000};
+
     ISwitchVectorProperty SteppingModeSP;
+
+
 };
 
 #endif // MICROSTEPPER_H
