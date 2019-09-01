@@ -39,7 +39,6 @@ MicroStepper::MicroStepper()
 {
     FI::SetCapability(FOCUSER_CAN_ABS_MOVE | FOCUSER_CAN_REL_MOVE | FOCUSER_CAN_REVERSE);
     isAbsolute = false;
-    isMoving = false;
     isParked = 0;
     isVcc12V = false;
 
@@ -73,6 +72,12 @@ bool MicroStepper::initProperties() {
     FocusMaxPosN[0].value = 10000;
     FocusMaxPosN[0].max = 10000;
     FocusMaxPosN[0].min = 10000;
+
+    // Focuser temperature
+    IUFillNumber(&TemperatureN[0], "TEMPERATURE", "Celsius", "%6.2f", -100, 100, 0, 0);
+    IUFillNumberVector(&TemperatureNP, TemperatureN, 1, getDeviceName(), "FOCUS_TEMPERATURE", "Temperature",
+                       MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
+
     return true;
 }
 
@@ -87,8 +92,16 @@ bool MicroStepper::updateProperties()
     {
         // Read these values before defining focuser interface properties
         readPosition();
-    }
 
+        if (readTemperature()) {
+            defineNumber(&TemperatureNP);
+        }
+    }
+    else
+    {
+        if (TemperatureNP.s == IPS_OK)
+            deleteProperty(TemperatureNP.name);
+    }
     INDI::Focuser::updateProperties();
 
     return true;
@@ -311,6 +324,7 @@ bool MicroStepper::saveConfigItems(FILE *fp)
 {
     INDI::Focuser::saveConfigItems(fp);
 
+    IUSaveConfigNumber(fp, &FocusRelPosNP);
     // We need to reserve and save stepping mode
     // so that the next time the driver is loaded, it is remembered and applied.
 
@@ -346,7 +360,7 @@ IPState MicroStepper::MoveAbsFocuser(uint32_t targetTicks)
         }
 
         // Issue here the command necessary to move the focuser to targetTicks
-        char cmd[DRIVER_LEN] = {0}, res[DRIVER_LEN] = {0};
+        char cmd[DRIVER_LEN] = {0};
         int32_t newValue = currentPosition;
         sprintf(cmd, "GOTO:%d#", newValue);
 
@@ -416,4 +430,77 @@ IPState MicroStepper::MoveRelFocuser(FocusDirection dir, uint32_t ticks) {
 bool MicroStepper::ReverseFocuser(bool enabled) {
     reverseFocus = enabled;
     return reverseFocus;
+}
+
+/**
+ * @brief MicroStepper::readTemperature
+ * @return
+ */
+bool MicroStepper::readTemperature() {
+    char cmd[DRIVER_LEN] = {0}; char res[DRIVER_LEN] = {0};
+    bool result = false;;
+    sprintf(cmd, "GETTEMP#");
+
+    if (sendCommand(cmd, res, strlen(cmd), 5)) {
+        int8_t temperature = -127;
+        sscanf(res+1, "%d", &temperature);
+
+        if (temperature > -100) {
+            TemperatureN[0].value = temperature;
+            TemperatureNP.s = IPS_OK;
+            result = true;
+        }
+    }
+
+    return result;
+}
+
+/**
+ * @brief MicroStepper::TimerHit
+ */
+void MicroStepper::TimerHit()
+{
+    if (isConnected() == false)
+        return;
+
+    // What is the last read position?
+    double currentPosition = FocusAbsPosN[0].value;
+
+    // Read the current position
+    readPosition();
+
+    // Check if we have a pending motion
+    // if isMoving() is false, then we stopped, so we need to set the Focus Absolute
+    // and relative properties to OK
+    if ( (FocusAbsPosNP.s == IPS_BUSY || FocusRelPosNP.s == IPS_BUSY) && isMoving() == false)
+    {
+        FocusAbsPosNP.s = IPS_OK;
+        FocusRelPosNP.s = IPS_OK;
+        IDSetNumber(&FocusAbsPosNP, nullptr);
+        IDSetNumber(&FocusRelPosNP, nullptr);
+    }
+    // If there was a different between last and current positions, let's update all clients
+    else if (currentPosition != FocusAbsPosN[0].value)
+    {
+        IDSetNumber(&FocusAbsPosNP, nullptr);
+    }
+
+    // Read temperature periodically
+    if (TemperatureNP.s == IPS_OK && m_TemperatureCounter++ == DRIVER_TEMPERATURE_FREQ)
+    {
+        m_TemperatureCounter = 0;
+        if (readTemperature())
+            IDSetNumber(&TemperatureNP, nullptr);
+    }
+
+    SetTimer(POLLMS);
+}
+
+/**
+ * @brief MicroStepper::isMoving
+ * @return
+ */
+bool MicroStepper::isMoving()
+{
+    return false;
 }

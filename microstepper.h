@@ -27,7 +27,15 @@
 class MicroStepper : public INDI::Focuser
 {
 public:
+    /**
+     * @brief MicroStepper
+     */
     MicroStepper();
+
+    /**
+     * @brief initProperties
+     * @return
+     */
     virtual bool initProperties() override;
     const char *getDefaultName();
     virtual bool Handshake() override;
@@ -36,21 +44,23 @@ public:
     IPState MoveAbsFocuser(uint32_t targetTicks) override;
     IPState MoveRelFocuser(FocusDirection dir, uint32_t ticks);
     bool ReverseFocuser(bool enabled);
-
-    enum FocusDirectionState {
-        NORMAL,
-        REVERSE
-    } ;
+    bool readTemperature();
+    void TimerHit();
 
 protected:
 
     bool readPosition();
 
+    bool isMoving();
     bool isAbsolute;
-    bool isMoving;
+    //bool isMoving;
     unsigned char isParked;
     bool isVcc12V;
     bool reverseFocus = false;
+
+    INumberVectorProperty TemperatureNP;
+    INumber TemperatureN[1];
+    uint16_t m_TemperatureCounter { 0 };
 
     ///////////////////////////////////////////////////////////////////////////////
     /// Utility Functions
