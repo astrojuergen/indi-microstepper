@@ -1,6 +1,6 @@
 # indi_microstepper
 
-This is an indi driver for the Milkyway Microstepper. 
+This is an indi driver for the Milkyway Microstepper. See www.themilkyway.de
 
 # Binaries
 
