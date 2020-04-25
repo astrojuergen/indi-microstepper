@@ -3,7 +3,7 @@
 <devGroup group="Focusers">
         <device label="MicroStepper" mdpd="true">
 	<driver name="MicroStepper">indi_microstepper</driver>
-	<version>@MICROSTEPPER_VERSION_MAJOR@.@MICROSTEPPER_VERSION_MINOR@</version>
+	<version>1.0</version>
 	</device>
 </devGroup>
 </driversList>
