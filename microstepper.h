@@ -58,6 +58,8 @@ protected:
     bool isVcc12V;
     bool reverseFocus = false;
 
+    bool oldDirection = false;
+
     INumberVectorProperty TemperatureNP;
     INumber TemperatureN[1];
     uint16_t m_TemperatureCounter { 0 };
@@ -105,7 +107,8 @@ protected:
 
     ISwitchVectorProperty SteppingModeSP;
 
-
+    virtual bool SetFocuserBacklash(int32_t steps) override;
+    virtual bool SetFocuserBacklashEnabled(bool enabled) override;
 };
 
 #endif // MICROSTEPPER_H

@@ -37,7 +37,8 @@ std::unique_ptr<MicroStepper> microStepper(new MicroStepper());
  */
 MicroStepper::MicroStepper()
 {
-    FI::SetCapability(FOCUSER_CAN_ABS_MOVE | FOCUSER_CAN_REL_MOVE | FOCUSER_CAN_REVERSE);
+    FI::SetCapability(FOCUSER_CAN_ABS_MOVE | FOCUSER_CAN_REL_MOVE | 
+                      FOCUSER_CAN_REVERSE | FOCUSER_HAS_BACKLASH);
     isAbsolute = false;
     isParked = 0;
     isVcc12V = false;
@@ -352,12 +353,18 @@ IPState MicroStepper::MoveAbsFocuser(uint32_t targetTicks)
         numberOfSteps = MAXIMUM_STEPS_PER_SEND;
     }
 
+    if (direction != oldDirection) {
+        numberOfSteps += FocusBacklashN[0].value;
+    }
+
     do {
         if (direction) {
             currentPosition += numberOfSteps;
         } else {
             currentPosition -= numberOfSteps;
         }
+
+        oldDirection = direction;
 
         // Issue here the command necessary to move the focuser to targetTicks
         char cmd[DRIVER_LEN] = {0};
@@ -504,3 +511,22 @@ bool MicroStepper::isMoving()
 {
     return false;
 }
+
+/************************************************************************************
+ *
+************************************************************************************/
+bool MicroStepper::SetFocuserBacklash(int32_t steps)
+{
+    INDI_UNUSED(steps);
+    return true;
+}
+
+/************************************************************************************
+ *
+************************************************************************************/
+bool MicroStepper::SetFocuserBacklashEnabled(bool enabled)
+{
+    INDI_UNUSED(enabled);
+    return true;
+}
+
